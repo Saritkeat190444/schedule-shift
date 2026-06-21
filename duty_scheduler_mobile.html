@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>ระบบจัดเวรแพทย์</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{
+--bg:#f5f4f0;--bg2:#ffffff;--bg3:#eceae4;
+--text:#1a1917;--text2:#5a5855;--text3:#9a9895;
+--accent:#1a3a5c;--accent2:#e8f2fa;
+--success:#1a6640;--success-bg:#e8f5ee;
+--warn:#7a4f00;--warn-bg:#fff3d6;
+--danger:#8a1a1a;--danger-bg:#fae8e8;
+--border:#d8d6d0;--border2:#c5c3bc;
+--radius:10px;--radius2:14px;--radius3:18px;
+--font:'IBM Plex Sans Thai',sans-serif;
+--mono:'IBM Plex Mono',monospace;
+--nav-h:64px;
+--header-h:56px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
+
+/* ===================== APP SHELL ===================== */
+.app-shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ======= TOP HEADER ======= */
+.top-header{
+  background:#1a3a5c;color:#fff;
+  height:var(--header-h);
+  display:flex;align-items:center;
+  padding:0 14px;
+  gap:10px;
+  flex-shrink:0;
+  position:relative;
+  z-index:200;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+.top-header h1{font-size:16px;font-weight:600;flex:1}
+.top-header p{font-size:10px;opacity:.6;margin-top:1px}
+.hdr-title{flex:1}
+.hdr-btn{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:var(--radius);
+  padding:7px 11px;font-size:12px;font-weight:500;
+  cursor:pointer;font-family:var(--font);
+  display:flex;align-items:center;gap:5px;
+  transition:background .15s;white-space:nowrap;
+}
+.hdr-btn:hover,.hdr-btn:active{background:rgba(255,255,255,.25)}
+.menu-btn{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:var(--radius);
+  padding:8px 10px;font-size:18px;line-height:1;
+  cursor:pointer;flex-shrink:0;
+}
+
+/* ======= CONTENT AREA ======= */
+.content{flex:1;overflow:hidden;position:relative}
+
+/* ======= DRAWER (Settings Panel) ======= */
+.drawer-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;
+}
+.drawer-overlay.show{display:block}
+.drawer{
+  position:fixed;top:0;left:0;bottom:0;width:min(330px,90vw);
+  background:var(--bg2);z-index:301;
+  transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  box-shadow:4px 0 24px rgba(0,0,0,.2);
+}
+.drawer.open{transform:translateX(0)}
+.drawer-header{
+  background:#1a3a5c;color:#fff;padding:16px 16px 14px;flex-shrink:0;
+  display:flex;align-items:flex-start;justify-content:space-between;
+}
+.drawer-header h2{font-size:16px;font-weight:600}
+.drawer-header p{font-size:11px;opacity:.65;margin-top:2px}
+.drawer-close{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:8px;padding:5px 9px;font-size:16px;
+  cursor:pointer;margin-left:8px;flex-shrink:0;
+}
+.drawer-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.d-sec{padding:16px;border-bottom:1px solid var(--border)}
+.d-sec h3{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+
+/* ======= BOTTOM NAV ======= */
+.bottom-nav{
+  height:var(--nav-h);background:var(--bg2);
+  border-top:1px solid var(--border);
+  display:flex;align-items:stretch;
+  flex-shrink:0;
+  box-shadow:0 -2px 10px rgba(0,0,0,.07);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;border:none;background:transparent;
+  font-family:var(--font);color:var(--text3);font-size:10px;font-weight:500;
+  transition:color .15s;padding:6px 4px 4px;
+  position:relative;
+}
+.nav-tab.active{color:var(--accent)}
+.nav-tab.active::after{
+  content:'';position:absolute;top:0;left:25%;right:25%;height:2.5px;
+  background:var(--accent);border-radius:0 0 3px 3px;
+}
+.nav-icon{font-size:20px;line-height:1}
+
+/* ======= PAGE CONTENT ======= */
+.page{display:none;position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.page.active{display:block}
+
+/* ======= GENERATE BUTTON (floating) ======= */
+.fab-gen{
+  position:fixed;bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));right:14px;
+  background:#1a3a5c;color:#fff;border:none;border-radius:22px;
+  padding:12px 18px;font-size:14px;font-weight:600;font-family:var(--font);
+  box-shadow:0 4px 16px rgba(26,58,92,.45);cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  z-index:100;transition:transform .15s,box-shadow .15s;
+}
+.fab-gen:active{transform:scale(.96);box-shadow:0 2px 8px rgba(26,58,92,.35)}
+#gen-status-fab{font-size:11px;opacity:.85}
+
+/* ======= BUTTONS ======= */
+button,.btn{font-family:var(--font);font-size:14px;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--text);padding:8px 14px;border-radius:var(--radius);transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-weight:500;line-height:1.4}
+button:active,.btn:active{opacity:.8}
+.btn-primary{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+.btn-primary:hover{background:#16304d}
+.btn-sm{padding:6px 11px;font-size:13px}
+.btn-icon{padding:6px;border:none;background:transparent;color:var(--text2);font-size:16px;min-width:34px;min-height:34px;justify-content:center}
+.btn-icon:hover{background:var(--bg3);border-radius:6px}
+.w-full{width:100%;justify-content:center}
+
+/* ======= FORM INPUTS ======= */
+input,select{font-family:var(--font);font-size:14px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:9px 11px;background:var(--bg2);color:var(--text);width:100%;transition:border-color .15s;min-height:42px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.date-display{font-size:11px;color:var(--text2);margin-top:5px;font-family:var(--mono)}
+.date-range-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+
+/* ======= DOCTOR ITEMS ======= */
+.doctor-item{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius2);padding:11px 13px;margin-bottom:9px;transition:border-color .15s}
+.doctor-item.off{opacity:.55}
+.doctor-row{display:flex;align-items:center;gap:8px}
+.doctor-name{font-weight:500;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toggle-svc{width:42px;height:24px;background:#ccc;border-radius:12px;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;padding:0}
+.toggle-svc.on{background:#1a6640}
+.toggle-svc::after{content:'';width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-svc.on::after{transform:translateX(18px)}
+.badge{font-size:10px;padding:2px 6px;border-radius:5px;font-weight:600}
+.badge-on{background:var(--success-bg);color:var(--success)}
+.badge-off{background:var(--danger-bg);color:var(--danger)}
+
+/* ======= SHIFT ROW ======= */
+.shift-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px}
+.shift-dot{width:14px;height:14px;border-radius:4px;flex-shrink:0}
+
+/* ======= STATS GRID ======= */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:480px){.stats-grid{grid-template-columns:repeat(3,1fr)}}
+.stat-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius2);padding:13px 14px}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:3px}
+.stat-val{font-size:22px;font-weight:700;font-family:var(--mono)}
+
+/* ======= VARIATION BAR ======= */
+.var-bar{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 13px;margin-bottom:14px;flex-wrap:wrap}
+.var-num{font-weight:600;font-family:var(--mono);font-size:14px;min-width:50px}
+
+/* ======= LEGEND ======= */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.legend-box{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}
+
+/* ======= TABLE ======= */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius2);box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.sch-table{border-collapse:collapse;background:var(--bg2)}
+.sch-table th{background:#1a3a5c;color:#fff;padding:8px 9px;font-size:11px;font-weight:500;white-space:nowrap;text-align:center}
+.sch-table td{padding:5px 7px;border:0.5px solid var(--border);font-size:12px;text-align:center;vertical-align:middle}
+.sch-table tr:hover td{background:#f8f7f4}
+.sticky-col{position:sticky;left:0;z-index:2;background:var(--bg)!important;white-space:nowrap}
+.weekend-bg{background:#fffbf0!important}
+.holiday-bg{background:#fff0f0!important}
+.shift-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;min-width:28px;min-height:28px;line-height:22px}
+.shift-badge:active{transform:scale(1.07);filter:brightness(.9)}
+.conflict-cell .shift-badge{outline:2px solid #e24b4a;outline-offset:1px}
+.warn-mark{font-size:9px;display:block;line-height:1.2}
+.empty-cell{color:var(--text3);font-size:12px;cursor:pointer;min-height:36px}
+.empty-cell:active{background:var(--accent2)!important}
+
+/* ======= SUMMARY TABLE ======= */
+.sum-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius2)}
+.sum-table{border-collapse:collapse;width:100%}
+.sum-table th{background:#1a3a5c;color:#fff;padding:9px 13px;font-size:12px;text-align:left}
+.sum-table td{padding:8px 13px;border:0.5px solid var(--border);font-size:13px}
+.sum-table tr:hover td{background:#f8f7f4}
+.total-pill{background:var(--accent2);color:var(--accent);padding:3px 9px;border-radius:5px;font-weight:600;font-size:12px;font-family:var(--mono)}
+
+/* ======= HOLIDAY LIST ======= */
+.holiday-list{background:var(--warn-bg);border:1px solid #e8c96a;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12px}
+.holiday-list h4{font-size:12px;font-weight:600;color:var(--warn);margin-bottom:6px}
+.holiday-item{color:var(--warn);padding:2px 0}
+
+/* ======= WARD TABLE ======= */
+.ward-cell{font-size:11px;line-height:1.35;padding:5px 8px!important;min-width:120px;text-align:left!important}
+.ward-doc-name{font-weight:500;display:block}
+.ward-doc-phone{color:var(--text2);font-size:10px;font-family:var(--mono)}
+
+/* ======= MODAL ======= */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center;padding:0}
+.modal-overlay.show{display:flex}
+@media(min-width:480px){.modal-overlay{align-items:center;padding:20px}}
+.modal{
+  background:var(--bg2);border-radius:var(--radius3) var(--radius3) 0 0;
+  padding:20px 18px 28px;
+  width:100%;max-width:500px;
+  border:1px solid var(--border);
+  max-height:90vh;overflow-y:auto;
+  animation:slideUp .25s cubic-bezier(.4,0,.2,1);
+}
+@media(min-width:480px){.modal{border-radius:var(--radius3);padding:24px}}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal h2{font-size:17px;margin-bottom:16px;font-weight:600}
+
+/* ======= OFF DATES ======= */
+.off-dates-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.off-badge{background:var(--danger-bg);color:var(--danger);font-size:12px;padding:4px 9px;border-radius:6px;cursor:pointer;border:1px solid rgba(138,26,26,.15)}
+
+/* ======= EXPORT ROW ======= */
+.export-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+
+/* ======= EMPTY STATE ======= */
+.empty-state{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty-state .icon{font-size:44px;margin-bottom:12px}
+.empty-state p{font-size:14px;line-height:1.7}
+
+/* ======= CARD ======= */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:14px}
+
+/* ======= SCROLLBAR ======= */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ======= UTILITIES ======= */
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.flex{display:flex}.items-center{align-items:center}.gap6{gap:6px}.gap8{gap:8px}.flex-1{flex:1}
+.text-xs{font-size:12px}.text-sm{font-size:13px}
+.fw6{font-weight:600}
+.text2{color:var(--text2)}
+
+/* ======= SECTION HEADER ======= */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-hdr h3{font-size:13px;font-weight:600;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- TOP HEADER -->
+<div class="top-header">
+  <button class="menu-btn" onclick="openDrawer()">☰</button>
+  <div class="hdr-title">
+    <div style="font-size:16px;font-weight:600">⚕ ระบบจัดเวรแพทย์</div>
+    <div style="font-size:10px;opacity:.6">Medical Duty Scheduler</div>
+  </div>
+  <button class="hdr-btn" onclick="generateSchedule()">⚡ สร้างเวร</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- PAGE: ตารางเวร (แพทย์) -->
+  <div class="page active" id="page-schedule">
+    <div id="var-bar" class="var-bar" style="display:none">
+      <span class="text-xs text2">รูปแบบ</span>
+      <span class="var-num" id="var-num">1/1</span>
+      <button class="btn btn-sm" onclick="prevVar()">◀</button>
+      <button class="btn btn-sm" onclick="nextVar()">▶</button>
+      <span class="text-xs text2" id="var-info"></span>
+    </div>
+    <div id="holiday-panel"></div>
+    <div class="stats-grid" id="stats-grid" style="display:none"></div>
+    <div class="legend" id="legend"></div>
+    <div class="export-row" id="export-row-sch" style="display:none">
+      <button class="btn btn-sm" onclick="exportJPEG('sch-wrap','ตารางเวร')">📷 JPEG</button>
+      <button class="btn btn-sm" onclick="exportExcel()">📊 Excel</button>
+    </div>
+    <div id="schedule-area">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>กำหนดช่วงเวลา แพทย์ และชนิดเวร<br>แล้วกดปุ่ม "สร้างเวร" ที่มุมบนขวา</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Ward -->
+  <div class="page" id="page-ward">
+    <div class="export-row" id="export-row-ward" style="display:none">
+      <button class="btn btn-sm" onclick="exportJPEG('ward-wrap','ตารางเวร_Ward')">📷 JPEG</button>
+      <button class="btn btn-sm" onclick="exportExcelWard()">📊 Excel</button>
+    </div>
+    <div id="ward-area">
+      <div class="empty-state">
+        <div class="icon">🏥</div>
+        <p>สร้างตารางเวรก่อนเพื่อดูตาราง Ward</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Summary -->
+  <div class="page" id="page-summary">
+    <div id="summary-area">
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>สร้างตารางเวรก่อนเพื่อดูสรุปยอด</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-tab active" id="nav-schedule" onclick="switchPage('schedule')">
+    <span class="nav-icon">📅</span>
+    <span>ตารางเวร</span>
+  </button>
+  <button class="nav-tab" id="nav-ward" onclick="switchPage('ward')">
+    <span class="nav-icon">🏥</span>
+    <span>Ward</span>
+  </button>
+  <button class="nav-tab" id="nav-summary" onclick="switchPage('summary')">
+    <span class="nav-icon">📊</span>
+    <span>สรุปยอด</span>
+  </button>
+</div>
+
+</div><!-- /app-shell -->
+
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <div style="font-size:16px;font-weight:600">ตั้งค่าตารางเวร</div>
+      <div style="font-size:11px;opacity:.65;margin-top:2px">กำหนดช่วงเวลา แพทย์ ชนิดเวร</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+
+    <!-- ช่วงเวลา -->
+    <div class="d-sec">
+      <h3>📅 ช่วงเวลาจัดเวร</h3>
+      <div class="date-range-row">
+        <div>
+          <label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px">วันเริ่มต้น</label>
+          <input type="date" id="date-from" onchange="onRangeChange()">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px">วันสิ้นสุด</label>
+          <input type="date" id="date-to" onchange="onRangeChange()">
+        </div>
+      </div>
+      <div id="range-info" class="date-display"></div>
+    </div>
+
+    <!-- ชนิดเวร -->
+    <div class="d-sec">
+      <div class="sec-hdr">
+        <h3>🕐 ชนิดเวร</h3>
+        <button class="btn btn-sm btn-primary" onclick="openAddShift()">+ เพิ่ม</button>
+      </div>
+      <div id="shift-list"></div>
+    </div>
+
+    <!-- รายชื่อแพทย์ -->
+    <div class="d-sec">
+      <div class="sec-hdr">
+        <h3>👨‍⚕️ รายชื่อแพทย์</h3>
+        <button class="btn btn-sm btn-primary" onclick="openAddDoctor()">+ เพิ่ม</button>
+      </div>
+      <div id="doctor-list"></div>
+    </div>
+
+    <!-- สร้างตาราง -->
+    <div class="d-sec">
+      <button class="btn btn-primary w-full" onclick="generateSchedule();closeDrawer()" style="padding:13px;font-size:15px">
+        ⚡ สร้างตารางเวร
+      </button>
+      <div id="gen-status" style="margin-top:9px;font-size:12px;color:var(--text2);text-align:center"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: Doctor -->
+<div class="modal-overlay" id="modal-doc">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modal-doc-title">เพิ่มแพทย์</h2>
+    <div class="form-row">
+      <label>คำนำหน้า</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text);cursor:pointer;font-weight:500">
+          <input type="radio" name="doc-prefix" value="นพ." style="width:18px;height:18px;accent-color:var(--accent)"> นพ.
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text);cursor:pointer;font-weight:500">
+          <input type="radio" name="doc-prefix" value="พญ." style="width:18px;height:18px;accent-color:var(--accent)"> พญ.
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text);cursor:pointer;font-weight:500">
+          <input type="radio" name="doc-prefix" id="prefix-other" value="other" style="width:18px;height:18px;accent-color:var(--accent)"> อื่นๆ
+        </label>
+        <input type="text" id="doc-prefix-custom" placeholder="ระบุ เช่น ทพ." style="width:120px;display:none;padding:7px 10px">
+      </div>
+    </div>
+    <div class="form-row"><label>ชื่อ-นามสกุล</label><input type="text" id="doc-name" placeholder="ชื่อ นามสกุล"></div>
+    <div class="form-row">
+      <label>เบอร์โทรศัพท์ <span style="font-size:11px;color:var(--text3)">(10 หลัก)</span></label>
+      <input type="tel" id="doc-phone" placeholder="0812345678" maxlength="10" oninput="validatePhone(this)">
+      <span id="phone-err" style="display:none;font-size:12px;color:var(--danger);margin-top:4px">⚠ กรุณากรอกเบอร์ 10 หลัก</span>
+    </div>
+    <div class="form-row">
+      <label>Parameter <span style="font-size:11px;color:var(--text2)">(0=ปกติ, +n=เวรมาก, -n=น้อย)</span></label>
+      <input type="number" id="doc-param" value="0" min="-5" max="5" style="width:90px">
+    </div>
+    <div class="form-row">
+      <label>วันที่ไม่สะดวก</label>
+      <div class="flex gap8 items-center">
+        <input type="date" id="doc-offdate" style="flex:1">
+        <button class="btn btn-sm" onclick="addOffDate()">+ เพิ่ม</button>
+      </div>
+      <div class="off-dates-wrap" id="offdate-wrap"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal('modal-doc')" style="min-height:44px">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveDoctor()" style="min-height:44px">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Shift -->
+<div class="modal-overlay" id="modal-shift">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modal-shift-title">เพิ่มชนิดเวร</h2>
+    <div class="form-row"><label>ชื่อเวร</label><input type="text" id="shift-name" placeholder="เวรเช้า, เวรดึก..."></div>
+    <div class="form-row"><label>ตัวย่อ (สูงสุด 3 ตัว)</label><input type="text" id="shift-abbr" maxlength="3" placeholder="ช, ด, บ"></div>
+    <div class="form-row">
+      <label>สี</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="color" id="shift-color" value="#1a5c8a" style="width:54px;height:40px;padding:3px;cursor:pointer;border-radius:var(--radius)">
+        <span class="text-xs text2">เลือกสีประจำเวร</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal('modal-shift')" style="min-height:44px">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveShift()" style="min-height:44px">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit cell -->
+<div class="modal-overlay" id="modal-cell">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="cell-title">แก้ไขเวร</h2>
+    <div id="cell-info" style="font-size:13px;color:var(--text2);margin-bottom:14px"></div>
+    <select id="cell-sel" style="width:100%;margin-bottom:12px;min-height:44px">
+      <option value="">— ไม่มีเวร —</option>
+    </select>
+    <div id="cell-warn" style="display:none;background:var(--warn-bg);color:var(--warn);padding:10px;border-radius:var(--radius);font-size:13px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-cell')" style="min-height:44px">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="confirmCell()" style="min-height:44px">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// DATA
+// =============================================
+let doctors = [
+  {id:1,name:'นพ.สมชาย ใจดี',phone:'0812345678',param:0,offDates:[],active:true},
+  {id:2,name:'พญ.สมหญิง รักดี',phone:'0823456789',param:0,offDates:[],active:true},
+  {id:3,name:'นพ.ประยุทธ เก่งมาก',phone:'0834567890',param:1,offDates:[],active:true},
+];
+let shifts = [
+  {id:1,name:'เวรเช้า',abbr:'ช',color:'#1a5c8a'},
+  {id:2,name:'เวรบ่าย',abbr:'บ',color:'#1a6640'},
+  {id:3,name:'เวรดึก',abbr:'ด',color:'#7a1a8a'},
+];
+
+const THAI_HOLIDAYS = {
+  '2025-01-01':{name:'วันขึ้นปีใหม่'},
+  '2025-02-12':{name:'วันมาฆบูชา'},
+  '2025-04-06':{name:'วันจักรี'},
+  '2025-04-07':{name:'วันหยุดชดเชยวันจักรี'},
+  '2025-04-13':{name:'วันสงกรานต์'},
+  '2025-04-14':{name:'วันสงกรานต์'},
+  '2025-04-15':{name:'วันสงกรานต์'},
+  '2025-04-16':{name:'วันหยุดชดเชยสงกรานต์'},
+  '2025-05-04':{name:'วันฉัตรมงคล'},
+  '2025-05-05':{name:'วันหยุดชดเชยวันฉัตรมงคล'},
+  '2025-05-09':{name:'วันพืชมงคล'},
+  '2025-05-11':{name:'วันวิสาขบูชา'},
+  '2025-05-12':{name:'วันหยุดชดเชยวันวิสาขบูชา'},
+  '2025-06-02':{name:'วันหยุดพิเศษ (ครม.)'},
+  '2025-06-03':{name:'วันเฉลิมพระชนมพรรษาพระบรมราชินี'},
+  '2025-07-28':{name:'วันพระบรมราชสมภพ ร.10'},
+  '2025-08-11':{name:'วันหยุดพิเศษ (ครม.)'},
+  '2025-08-12':{name:'วันเฉลิมพระชนมพรรษา ร.9 / วันแม่'},
+  '2025-10-13':{name:'วันสวรรคต ร.9'},
+  '2025-10-23':{name:'วันปิยมหาราช'},
+  '2025-12-05':{name:'วันพ่อแห่งชาติ'},
+  '2025-12-10':{name:'วันรัฐธรรมนูญ'},
+  '2025-12-31':{name:'วันสิ้นปี'},
+  '2026-01-01':{name:'วันขึ้นปีใหม่'},
+  '2026-01-02':{name:'วันหยุดพิเศษ (ครม.)'},
+  '2026-03-03':{name:'วันมาฆบูชา'},
+  '2026-04-06':{name:'วันจักรี'},
+  '2026-04-13':{name:'วันสงกรานต์'},
+  '2026-04-14':{name:'วันสงกรานต์'},
+  '2026-04-15':{name:'วันสงกรานต์'},
+  '2026-05-04':{name:'วันฉัตรมงคล'},
+  '2026-05-13':{name:'วันพืชมงคล'},
+  '2026-05-31':{name:'วันวิสาขบูชา'},
+  '2026-06-01':{name:'วันหยุดชดเชยวันวิสาขบูชา'},
+  '2026-06-03':{name:'วันเฉลิมพระชนมพรรษาพระบรมราชินี'},
+  '2026-07-28':{name:'วันพระบรมราชสมภพ ร.10'},
+  '2026-07-29':{name:'วันอาสาฬหบูชา'},
+  '2026-08-12':{name:'วันเฉลิมพระชนมพรรษา ร.9 / วันแม่'},
+  '2026-10-13':{name:'วันสวรรคต ร.9'},
+  '2026-10-23':{name:'วันปิยมหาราช'},
+  '2026-12-05':{name:'วันพ่อแห่งชาติ'},
+  '2026-12-07':{name:'วันหยุดชดเชยวันพ่อแห่งชาติ'},
+  '2026-12-10':{name:'วันรัฐธรรมนูญ'},
+  '2026-12-31':{name:'วันสิ้นปี'},
+};
+
+const THAI_DAYS_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+let schedule = {};
+let allVariations = [];
+let curVar = 0;
+let editDocId = null, editShiftId = null;
+let tempOffDates = [];
+let cellData = {};
+
+// =============================================
+// INIT
+// =============================================
+function init(){
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  document.getElementById('date-from').value = toISO(firstDay);
+  document.getElementById('date-to').value = toISO(lastDay);
+  onRangeChange();
+  renderShifts();
+  renderDoctors();
+  renderLegend();
+}
+
+function toISO(d){ return d.toISOString().split('T')[0]; }
+
+function onRangeChange(){
+  const from = document.getElementById('date-from').value;
+  const to   = document.getElementById('date-to').value;
+  if(!from||!to) return;
+  const d1 = new Date(from), d2 = new Date(to);
+  const days = Math.round((d2-d1)/86400000)+1;
+  if(days<1){ document.getElementById('range-info').textContent='⚠ วันสิ้นสุดต้องมากกว่าวันเริ่มต้น'; return; }
+  document.getElementById('range-info').textContent =
+    `${days} วัน: ${ddmmyy(from)} — ${ddmmyy(to)}`;
+}
+
+// DATE HELPERS
+function ddmmyy(ds){
+  const d=new Date(ds);
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()+543).slice(2)}`;
+}
+function ddmmyyyy(ds){
+  const d=new Date(ds);
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()+543}`;
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+function isHoliday(ds){ return !!THAI_HOLIDAYS[ds]; }
+function isWeekend(ds){ const d=new Date(ds); return d.getDay()===0||d.getDay()===6; }
+
+function buildDateRange(){
+  const from = document.getElementById('date-from').value;
+  const to   = document.getElementById('date-to').value;
+  if(!from||!to) return [];
+  const dates=[];
+  let cur=new Date(from);
+  const end=new Date(to);
+  while(cur<=end){
+    const ds=toISO(cur);
+    const d=new Date(ds);
+    dates.push({ds, dow:d.getDay(), isHoliday:isHoliday(ds), isWeekend:isWeekend(ds)});
+    cur.setDate(cur.getDate()+1);
+  }
+  return dates;
+}
+
+// =============================================
+// DRAWER
+// =============================================
+function openDrawer(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+// =============================================
+// PAGE NAVIGATION
+// =============================================
+function switchPage(name){
+  ['schedule','ward','summary'].forEach(n=>{
+    document.getElementById('page-'+n).classList.toggle('active',n===name);
+    document.getElementById('nav-'+n).classList.toggle('active',n===name);
+  });
+  if((name==='summary'||name==='ward')&&Object.keys(schedule).length){
+    const dates=buildDateRange(),activeDocs=doctors.filter(d=>d.active);
+    if(name==='summary') renderSummary(dates,activeDocs);
+    if(name==='ward') renderWardTable(dates,activeDocs);
+  }
+}
+
+// =============================================
+// SIDEBAR RENDERS
+// =============================================
+function renderShifts(){
+  document.getElementById('shift-list').innerHTML = shifts.map(s=>`
+    <div class="shift-row">
+      <div class="shift-dot" style="background:${s.color}"></div>
+      <span style="flex:1;font-size:13px;font-weight:500">${s.name} <span style="color:var(--text3);font-weight:400">(${s.abbr})</span></span>
+      <button class="btn-icon" onclick="openEditShift(${s.id})">✏️</button>
+      <button class="btn-icon" onclick="deleteShift(${s.id})">🗑</button>
+    </div>`).join('');
+  renderLegend();
+}
+
+function renderDoctors(){
+  document.getElementById('doctor-list').innerHTML = doctors.map(d=>`
+    <div class="doctor-item ${d.active?'':'off'}">
+      <div class="doctor-row">
+        <button class="toggle-svc ${d.active?'on':''}" onclick="toggleDoctor(${d.id})"></button>
+        <span class="doctor-name">${d.name}</span>
+        <span class="badge ${d.active?'badge-on':'badge-off'}">${d.active?'ON':'OFF'}</span>
+        <button class="btn-icon" onclick="openEditDoctor(${d.id})">✏️</button>
+        <button class="btn-icon" onclick="deleteDoctor(${d.id})">🗑</button>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap">
+        <span>📱 ${d.phone||'-'}</span>
+        <span>⚖ param:${d.param>=0?'+':''}${d.param}</span>
+        ${d.offDates.length?`<span>🚫 ${d.offDates.length}วัน</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderLegend(){
+  document.getElementById('legend').innerHTML = shifts.map(s=>`
+    <div class="legend-item"><div class="legend-box" style="background:${s.color}22;border-color:${s.color}55"></div>${s.name} (${s.abbr})</div>`).join('')+
+  `<div class="legend-item"><div class="legend-box" style="background:#fffbf0;border-color:#e8c96a"></div>ส-อ</div>
+   <div class="legend-item"><div class="legend-box" style="background:#fff0f0;border-color:#f09595"></div>หยุดราชการ</div>
+   <div class="legend-item"><div style="width:14px;height:14px;border:2px solid #e24b4a;border-radius:4px"></div>เวรติดกัน</div>`;
+}
+
+function toggleDoctor(id){ const d=doctors.find(x=>x.id===id); if(d)d.active=!d.active; renderDoctors(); }
+
+// =============================================
+// MODALS
+// =============================================
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show');}));
+document.addEventListener('change', function(e){
+  if(e.target.name==='doc-prefix'){
+    const customEl=document.getElementById('doc-prefix-custom');
+    customEl.style.display=(e.target.value==='other')?'':'none';
+    if(e.target.value!=='other') customEl.value='';
+  }
+});
+
+function validatePhone(input){
+  input.value=input.value.replace(/\D/g,'');
+  const err=document.getElementById('phone-err');
+  const inv=input.value.length>0&&input.value.length!==10;
+  input.style.borderColor=inv?'var(--danger)':'';
+  err.style.display=inv?'block':'none';
+}
+
+function openAddDoctor(){
+  editDocId=null; tempOffDates=[];
+  document.getElementById('modal-doc-title').textContent='เพิ่มแพทย์';
+  ['doc-name','doc-phone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('doc-param').value=0;
+  document.getElementById('doc-phone').style.borderColor='';
+  document.getElementById('phone-err').style.display='none';
+  document.querySelectorAll('input[name="doc-prefix"]').forEach(r=>r.checked=false);
+  document.getElementById('doc-prefix-custom').style.display='none';
+  document.getElementById('doc-prefix-custom').value='';
+  renderOffdates(); openModal('modal-doc');
+}
+
+function openEditDoctor(id){
+  editDocId=id; const d=doctors.find(x=>x.id===id);
+  document.getElementById('modal-doc-title').textContent='แก้ไขแพทย์';
+  document.getElementById('doc-phone').value=d.phone||'';
+  document.getElementById('doc-param').value=d.param;
+  document.getElementById('doc-phone').style.borderColor='';
+  document.getElementById('phone-err').style.display='none';
+  const knownPrefixes=['นพ.','พญ.'];
+  let foundPrefix='', nameOnly=d.name;
+  for(const p of knownPrefixes){
+    if(d.name.startsWith(p)){foundPrefix=p; nameOnly=d.name.slice(p.length).trim(); break;}
+  }
+  document.querySelectorAll('input[name="doc-prefix"]').forEach(r=>{
+    if(r.value===foundPrefix) r.checked=true;
+    else if(r.value==='other'&&!knownPrefixes.includes(foundPrefix)&&foundPrefix!=='') r.checked=true;
+    else r.checked=false;
+  });
+  const customEl=document.getElementById('doc-prefix-custom');
+  if(!knownPrefixes.includes(foundPrefix)&&foundPrefix!==''){
+    customEl.style.display=''; customEl.value=foundPrefix; nameOnly=d.name.replace(foundPrefix,'').trim();
+  } else { customEl.style.display='none'; customEl.value=''; }
+  document.getElementById('doc-name').value=nameOnly;
+  tempOffDates=[...d.offDates]; renderOffdates(); openModal('modal-doc');
+}
+
+function addOffDate(){
+  const v=document.getElementById('doc-offdate').value;
+  if(v&&!tempOffDates.includes(v)){tempOffDates.push(v);tempOffDates.sort();renderOffdates();}
+}
+function removeOffDate(d){tempOffDates=tempOffDates.filter(x=>x!==d);renderOffdates();}
+function renderOffdates(){
+  document.getElementById('offdate-wrap').innerHTML=tempOffDates.map(d=>
+    `<span class="off-badge" onclick="removeOffDate('${d}')">${ddmmyyyy(d)} ×</span>`).join('');
+}
+
+function saveDoctor(){
+  const nameOnly=document.getElementById('doc-name').value.trim();
+  if(!nameOnly){alert('กรุณากรอกชื่อ-นามสกุล');return;}
+  const checkedRadio=document.querySelector('input[name="doc-prefix"]:checked');
+  let prefix='';
+  if(checkedRadio){
+    if(checkedRadio.value==='other'){
+      prefix=document.getElementById('doc-prefix-custom').value.trim();
+    } else {
+      prefix=checkedRadio.value;
+    }
+  }
+  const name=(prefix?prefix+nameOnly:nameOnly);
+  const phone=document.getElementById('doc-phone').value.replace(/\D/g,'');
+  if(phone.length>0&&phone.length!==10){
+    document.getElementById('doc-phone').style.borderColor='var(--danger)';
+    document.getElementById('phone-err').style.display='block';
+    return;
+  }
+  const param=parseInt(document.getElementById('doc-param').value)||0;
+  if(editDocId){
+    Object.assign(doctors.find(x=>x.id===editDocId),{name,phone,param,offDates:[...tempOffDates]});
+  } else {
+    doctors.push({id:Date.now(),name,phone,param,offDates:[...tempOffDates],active:true});
+  }
+  renderDoctors(); closeModal('modal-doc');
+}
+
+function deleteDoctor(id){if(confirm('ลบแพทย์นี้?')){doctors=doctors.filter(x=>x.id!==id);renderDoctors();}}
+
+function openAddShift(){
+  editShiftId=null;
+  document.getElementById('modal-shift-title').textContent='เพิ่มชนิดเวร';
+  ['shift-name','shift-abbr'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('shift-color').value='#1a5c8a';
+  openModal('modal-shift');
+}
+function openEditShift(id){
+  editShiftId=id; const s=shifts.find(x=>x.id===id);
+  document.getElementById('modal-shift-title').textContent='แก้ไขชนิดเวร';
+  document.getElementById('shift-name').value=s.name;
+  document.getElementById('shift-abbr').value=s.abbr;
+  document.getElementById('shift-color').value=s.color;
+  openModal('modal-shift');
+}
+function saveShift(){
+  const name=document.getElementById('shift-name').value.trim();
+  if(!name){alert('กรุณากรอกชื่อเวร');return;}
+  const abbr=document.getElementById('shift-abbr').value.trim()||name[0];
+  const color=document.getElementById('shift-color').value;
+  if(editShiftId){Object.assign(shifts.find(x=>x.id===editShiftId),{name,abbr,color});}
+  else shifts.push({id:Date.now(),name,abbr,color});
+  renderShifts(); closeModal('modal-shift');
+}
+function deleteShift(id){if(confirm('ลบชนิดเวรนี้?')){shifts=shifts.filter(x=>x.id!==id);renderShifts();}}
+
+// =============================================
+// GENERATION
+// =============================================
+function generateSchedule(){
+  const activeDocs=doctors.filter(d=>d.active);
+  if(!activeDocs.length){alert('ไม่มีแพทย์ที่ Active');return;}
+  if(!shifts.length){alert('กรุณาเพิ่มชนิดเวร');return;}
+  const dates=buildDateRange();
+  if(!dates.length){alert('กรุณาเลือกช่วงวันที่');return;}
+  document.getElementById('gen-status').textContent='⏳ กำลังคำนวณ...';
+  setTimeout(()=>{
+    try{
+      allVariations=[];
+      for(let t=0;t<12&&allVariations.length<6;t++){
+        const res=tryGenerate(dates,activeDocs,t);
+        if(res){
+          const key=JSON.stringify(res);
+          if(!allVariations.some(v=>JSON.stringify(v)===key)) allVariations.push(res);
+        }
+      }
+      if(!allVariations.length){document.getElementById('gen-status').textContent='⚠ ไม่สามารถจัดได้';return;}
+      curVar=0; schedule=allVariations[0];
+      renderAll(dates,activeDocs);
+      document.getElementById('var-bar').style.display=allVariations.length>1?'flex':'none';
+      document.getElementById('var-num').textContent=`1/${allVariations.length}`;
+      document.getElementById('var-info').textContent=`พบ ${allVariations.length} รูปแบบ`;
+      document.getElementById('stats-grid').style.display='grid';
+      document.getElementById('export-row-sch').style.display='flex';
+      document.getElementById('export-row-ward').style.display='flex';
+      document.getElementById('gen-status').textContent=`✓ สร้างเสร็จ ${allVariations.length} รูปแบบ`;
+    }catch(e){document.getElementById('gen-status').textContent='❌ Error: '+e.message;console.error(e);}
+  },30);
+}
+
+function tryGenerate(dates,activeDocs,seed){
+  const result={};
+  const cnt={};
+  activeDocs.forEach(d=>{cnt[d.id]={tot:0,wd:0,we:0,byShift:{}};shifts.forEach(s=>{cnt[d.id].byShift[s.id]=0;});});
+  const lastDutyDate={};
+  const lastShiftId={};
+  const rngBase=seed*7919;
+  for(const di of dates){
+    result[di.ds]={};
+    const isWE=di.isWeekend||di.isHoliday;
+    const dateIdx=dates.indexOf(di);
+    for(const shift of shifts){
+      const shiftIdx=shifts.indexOf(shift);
+      let elig=activeDocs.filter(d=>!d.offDates.includes(di.ds));
+      if(!elig.length) elig=[...activeDocs];
+      const noConsec=elig.filter(d=>{
+        if(!lastDutyDate[d.id]) return true;
+        return (new Date(di.ds)-new Date(lastDutyDate[d.id]))/86400000>1;
+      });
+      const pool=noConsec.length?noConsec:elig;
+      const noSame=pool.filter(d=>lastShiftId[d.id]!==shift.id);
+      const finalPool=noSame.length?noSame:pool;
+      finalPool.sort((a,b)=>{
+        const ca=cnt[a.id], cb=cnt[b.id];
+        const sA=(ca.byShift[shift.id]*3)+(ca.tot-a.param)+(isWE?ca.we:ca.wd)*1.5+Math.sin(a.id*1327+rngBase+dateIdx*97+shiftIdx*43)*0.5;
+        const sB=(cb.byShift[shift.id]*3)+(cb.tot-b.param)+(isWE?cb.we:cb.wd)*1.5+Math.sin(b.id*1327+rngBase+dateIdx*97+shiftIdx*43)*0.5;
+        return sA-sB;
+      });
+      const chosen=finalPool[0];
+      result[di.ds][shift.id]=chosen.id;
+      cnt[chosen.id].tot++;
+      cnt[chosen.id].byShift[shift.id]++;
+      if(isWE) cnt[chosen.id].we++; else cnt[chosen.id].wd++;
+      lastDutyDate[chosen.id]=di.ds;
+      lastShiftId[chosen.id]=shift.id;
+    }
+  }
+  return result;
+}
+
+function prevVar(){
+  const dates=buildDateRange(),activeDocs=doctors.filter(d=>d.active);
+  curVar=(curVar-1+allVariations.length)%allVariations.length;
+  schedule=allVariations[curVar];
+  document.getElementById('var-num').textContent=`${curVar+1}/${allVariations.length}`;
+  renderAll(dates,activeDocs);
+}
+function nextVar(){
+  const dates=buildDateRange(),activeDocs=doctors.filter(d=>d.active);
+  curVar=(curVar+1)%allVariations.length;
+  schedule=allVariations[curVar];
+  document.getElementById('var-num').textContent=`${curVar+1}/${allVariations.length}`;
+  renderAll(dates,activeDocs);
+}
+
+function renderAll(dates,activeDocs){
+  renderHolidayPanel(dates);
+  renderDocTable(dates,activeDocs);
+  renderWardTable(dates,activeDocs);
+  renderStats(dates,activeDocs);
+  renderSummary(dates,activeDocs);
+}
+
+// HOLIDAY PANEL
+function renderHolidayPanel(dates){
+  const hols=dates.filter(d=>d.isHoliday);
+  if(!hols.length){document.getElementById('holiday-panel').innerHTML='';return;}
+  document.getElementById('holiday-panel').innerHTML=`
+    <div class="holiday-list">
+      <h4>📅 วันหยุดราชการในช่วงนี้ (${hols.length} วัน)</h4>
+      ${hols.map(h=>`<div class="holiday-item">• ${ddmmyyyy(h.ds)} (${THAI_DAYS_SHORT[h.dow]}) — ${THAI_HOLIDAYS[h.ds].name}</div>`).join('')}
+    </div>`;
+}
+
+// TABLE HELPERS
+function isConsecutive(docId,ds){
+  const d=new Date(ds);
+  const prev=new Date(d);prev.setDate(prev.getDate()-1);
+  const next=new Date(d);next.setDate(next.getDate()+1);
+  const ps=toISO(prev),ns=toISO(next);
+  if(schedule[ps]&&Object.values(schedule[ps]).includes(docId)) return true;
+  if(schedule[ns]&&Object.values(schedule[ns]).includes(docId)) return true;
+  return false;
+}
+function isSameShiftRepeat(docId,ds,shiftId){
+  const d=new Date(ds);d.setDate(d.getDate()-1);
+  const ps=toISO(d);
+  return !!(schedule[ps]&&schedule[ps][shiftId]===docId);
+}
+function getAssignedShift(docId,ds){
+  if(!schedule[ds]) return null;
+  for(const [sid,did] of Object.entries(schedule[ds])){
+    if(did===docId) return parseInt(sid);
+  }
+  return null;
+}
+
+// TABLE 1: Doc schedule
+function renderDocTable(dates,activeDocs){
+  let html=`<div class="tbl-wrap" id="sch-wrap"><table class="sch-table"><thead><tr>
+    <th style="text-align:left;min-width:82px;position:sticky;left:0;background:#1a3a5c;z-index:3">วันที่</th>
+    <th style="min-width:30px;position:sticky;left:82px;background:#1a3a5c;z-index:3;border-right:2px solid rgba(255,255,255,.2)">วัน</th>`;
+  activeDocs.forEach(doc=>{
+    html+=`<th style="min-width:74px;border-left:1px solid rgba(255,255,255,.15)">
+      <div>${doc.name}</div>
+      <div style="font-size:9px;opacity:.7;font-family:var(--mono)">${doc.phone||''}</div>
+    </th>`;
+  });
+  html+=`</tr></thead><tbody>`;
+  dates.forEach(di=>{
+    const isHol=di.isHoliday;
+    const isWE=di.isWeekend||isHol;
+    const rowCls=isHol?'holiday-bg':isWE?'weekend-bg':'';
+    html+=`<tr>
+      <td class="sticky-col ${rowCls}" style="text-align:left;padding-left:8px;font-weight:500;font-size:11px;min-width:82px">${ddmmyy(di.ds)}${isHol?` <span style="font-size:9px;color:#c0392b">●</span>`:''}</td>
+      <td class="${rowCls}" style="position:sticky;left:82px;z-index:1;background:${isHol?'#fff0f0':isWE?'#fffbf0':'var(--bg)'};font-size:11px;color:var(--text2);border-right:2px solid var(--border)">${THAI_DAYS_SHORT[di.dow]}</td>`;
+    activeDocs.forEach(doc=>{
+      const sid=getAssignedShift(doc.id,di.ds);
+      const conflict=sid?isConsecutive(doc.id,di.ds):false;
+      const sameRep=sid?isSameShiftRepeat(doc.id,di.ds,sid):false;
+      const cellBg=isHol?'#fff8f8':isWE?'#fffbf0':'';
+      if(sid){
+        const sh=shifts.find(s=>s.id===sid);
+        html+=`<td style="background:${cellBg}" class="${conflict?'conflict-cell':''}">
+          <span class="shift-badge" style="background:${sh.color}22;color:${sh.color};border:1px solid ${sh.color}55"
+            onclick="openCell('${di.ds}',${doc.id},'${doc.name}')">${sh.abbr}</span>
+          ${conflict?`<span class="warn-mark" style="color:var(--danger)">⚠ ติดวัน</span>`:''}
+          ${(!conflict&&sameRep)?`<span class="warn-mark" style="color:#b8860b">↻ ซ้ำ</span>`:''}
+        </td>`;
+      } else {
+        html+=`<td class="empty-cell" style="background:${cellBg}" onclick="openCell('${di.ds}',${doc.id},'${doc.name}')">—</td>`;
+      }
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('schedule-area').innerHTML=html;
+}
+
+// TABLE 2: Ward
+function renderWardTable(dates,activeDocs){
+  let html=`<div class="tbl-wrap" id="ward-wrap"><table class="sch-table"><thead><tr>
+    <th style="text-align:left;min-width:82px;position:sticky;left:0;background:#1a3a5c;z-index:3">วันที่</th>
+    <th style="min-width:30px;position:sticky;left:82px;background:#1a3a5c;z-index:3;border-right:2px solid rgba(255,255,255,.2)">วัน</th>`;
+  shifts.forEach(sh=>{
+    html+=`<th style="min-width:120px;border-left:2px solid rgba(255,255,255,.2)">
+      <span style="background:${sh.color}44;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px">${sh.name}</span>
+    </th>`;
+  });
+  html+=`</tr></thead><tbody>`;
+  dates.forEach(di=>{
+    const isHol=di.isHoliday;
+    const isWE=di.isWeekend||isHol;
+    const rowCls=isHol?'holiday-bg':isWE?'weekend-bg':'';
+    html+=`<tr>
+      <td class="sticky-col ${rowCls}" style="text-align:left;padding-left:8px;font-weight:500;font-size:11px;min-width:82px">${ddmmyy(di.ds)}${isHol?` <span style="font-size:9px;color:#c0392b">●</span>`:''}</td>
+      <td class="${rowCls}" style="position:sticky;left:82px;z-index:1;background:${isHol?'#fff0f0':isWE?'#fffbf0':'var(--bg)'};font-size:11px;color:var(--text2);border-right:2px solid var(--border)">${THAI_DAYS_SHORT[di.dow]}</td>`;
+    shifts.forEach(sh=>{
+      const docId=schedule[di.ds]?schedule[di.ds][sh.id]:null;
+      const doc=docId?activeDocs.find(d=>d.id===docId):null;
+      const cellBg=isHol?'#fff8f8':isWE?'#fffbf0':'';
+      if(doc){
+        html+=`<td class="ward-cell" style="background:${cellBg};border-left:2px solid ${sh.color}33">
+          <span class="ward-doc-name">${doc.name}</span>
+          <span class="ward-doc-phone">${doc.phone||''}</span>
+        </td>`;
+      } else {
+        html+=`<td class="ward-cell" style="background:${cellBg};border-left:2px solid var(--border);color:var(--text3)">—</td>`;
+      }
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('ward-area').innerHTML=html;
+}
+
+// STATS
+function renderStats(dates,activeDocs){
+  const total=dates.length;
+  const hols=dates.filter(d=>d.isHoliday).length;
+  const wes=dates.filter(d=>d.isWeekend&&!d.isHoliday).length;
+  let conflicts=0,sameReps=0;
+  activeDocs.forEach(d=>{
+    dates.forEach(di=>{
+      const sid=getAssignedShift(d.id,di.ds);
+      if(sid){if(isConsecutive(d.id,di.ds))conflicts++;if(isSameShiftRepeat(d.id,di.ds,sid))sameReps++;}
+    });
+  });
+  conflicts=Math.floor(conflicts/2);
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">วันทั้งหมด</div><div class="stat-val">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">วันหยุดราชการ</div><div class="stat-val">${hols}</div></div>
+    <div class="stat-card"><div class="stat-label">เสาร์-อาทิตย์</div><div class="stat-val">${wes}</div></div>
+    <div class="stat-card"><div class="stat-label">แพทย์ Active</div><div class="stat-val">${activeDocs.length}</div></div>
+    <div class="stat-card"><div class="stat-label">เวรทั้งหมด</div><div class="stat-val">${total*shifts.length}</div></div>
+    <div class="stat-card" style="${conflicts>0?'border-color:var(--danger);background:var(--danger-bg)':''}">
+      <div class="stat-label" style="${conflicts>0?'color:var(--danger)':''}">เวรติดกัน</div>
+      <div class="stat-val" style="${conflicts>0?'color:var(--danger)':''}">${conflicts}</div>
+    </div>
+    <div class="stat-card" style="${sameReps>0?'border-color:#b8860b;background:#fffbea':''}">
+      <div class="stat-label" style="${sameReps>0?'color:#7a5a00':''}">ซ้ำชนิดเดิม</div>
+      <div class="stat-val" style="${sameReps>0?'color:#7a5a00':''}">${sameReps}</div>
+    </div>`;
+}
+
+// SUMMARY
+function renderSummary(dates,activeDocs){
+  if(!dates) dates=buildDateRange();
+  if(!activeDocs) activeDocs=doctors.filter(d=>d.active);
+  const cnt={};
+  activeDocs.forEach(d=>{cnt[d.id]={tot:0,wd:0,we:0,byShift:{}};shifts.forEach(s=>{cnt[d.id].byShift[s.id]=0;});});
+  dates.forEach(di=>{
+    const isWE=di.isWeekend||di.isHoliday;
+    Object.entries(schedule[di.ds]||{}).forEach(([sid,did])=>{
+      if(cnt[did]){cnt[did].tot++;cnt[did].byShift[sid]=(cnt[did].byShift[sid]||0)+1;if(isWE)cnt[did].we++;else cnt[did].wd++;}
+    });
+  });
+  const from=document.getElementById('date-from').value;
+  const to=document.getElementById('date-to').value;
+  let html=`<div class="card">
+    <h2 style="font-size:16px;margin-bottom:14px">สรุปยอดเวร ${ddmmyyyy(from)} — ${ddmmyyyy(to)}</h2>
+    <div class="sum-wrap"><table class="sum-table"><thead><tr>
+      <th>ชื่อแพทย์</th><th style="text-align:center">รวม</th><th style="text-align:center">ธรรมดา</th><th style="text-align:center">หยุด</th>`;
+  shifts.forEach(s=>html+=`<th style="text-align:center">${s.name}</th>`);
+  html+=`<th>โทร</th></tr></thead><tbody>`;
+  activeDocs.forEach(d=>{
+    const c=cnt[d.id];
+    html+=`<tr><td style="font-weight:500">${d.name}</td>
+      <td style="text-align:center"><span class="total-pill">${c.tot}</span></td>
+      <td style="text-align:center">${c.wd}</td><td style="text-align:center">${c.we}</td>`;
+    shifts.forEach(s=>html+=`<td style="text-align:center">${c.byShift[s.id]||0}</td>`);
+    html+=`<td style="color:var(--text2);font-family:var(--mono);font-size:12px">${d.phone||'-'}</td></tr>`;
+  });
+  html+=`<tr style="background:var(--bg3);font-weight:600">
+    <td>รวม</td>
+    <td style="text-align:center">${activeDocs.reduce((s,d)=>s+cnt[d.id].tot,0)}</td>
+    <td style="text-align:center">${activeDocs.reduce((s,d)=>s+cnt[d.id].wd,0)}</td>
+    <td style="text-align:center">${activeDocs.reduce((s,d)=>s+cnt[d.id].we,0)}</td>`;
+  shifts.forEach(s=>html+=`<td style="text-align:center">${activeDocs.reduce((sum,d)=>sum+(cnt[d.id].byShift[s.id]||0),0)}</td>`);
+  html+=`<td></td></tr></tbody></table></div></div>`;
+  document.getElementById('summary-area').innerHTML=html;
+}
+
+// CELL EDIT
+let _cellData={};
+function openCell(ds,docId,docName){
+  _cellData={ds,docId};
+  document.getElementById('cell-title').textContent=`แก้ไขเวร — ${docName}`;
+  const d=new Date(ds);
+  document.getElementById('cell-info').textContent=`${ddmmyyyy(ds)} (${THAI_DAYS_SHORT[d.getDay()]})${THAI_HOLIDAYS[ds]?' — '+THAI_HOLIDAYS[ds].name:''}`;
+  const sel=document.getElementById('cell-sel');
+  sel.innerHTML=`<option value="">— ไม่มีเวร —</option>`+shifts.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const cur=getAssignedShift(docId,ds);
+  if(cur) sel.value=cur;
+  const warn=document.getElementById('cell-warn');
+  if(isConsecutive(docId,ds)){warn.style.display='block';warn.textContent='⚠ แพทย์มีเวรวันก่อนหน้าหรือวันถัดไปอยู่แล้ว';}
+  else warn.style.display='none';
+  openModal('modal-cell');
+}
+function confirmCell(){
+  const {ds,docId}=_cellData;
+  if(!schedule[ds]) schedule[ds]={};
+  for(const sid of Object.keys(schedule[ds])){if(schedule[ds][sid]===docId) delete schedule[ds][sid];}
+  const shiftId=parseInt(document.getElementById('cell-sel').value)||null;
+  if(shiftId) schedule[ds][shiftId]=docId;
+  const dates=buildDateRange(),activeDocs=doctors.filter(d=>d.active);
+  renderAll(dates,activeDocs);
+  closeModal('modal-cell');
+}
+
+// EXPORT
+async function exportJPEG(elemId, filename){
+  if(!Object.keys(schedule).length){alert('สร้างตารางก่อน');return;}
+  const el=document.getElementById(elemId);
+  if(!el){alert('ไม่พบตาราง');return;}
+  try{
+    const origOverflow=el.style.overflow;
+    el.style.overflow='visible';
+    const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollX:0,scrollY:0,width:el.scrollWidth,height:el.scrollHeight});
+    el.style.overflow=origOverflow;
+    const link=document.createElement('a');
+    const from=document.getElementById('date-from').value;
+    const to=document.getElementById('date-to').value;
+    link.download=`${filename}_${from}_${to}.jpg`;
+    link.href=canvas.toDataURL('image/jpeg',0.95);
+    link.click();
+  }catch(e){alert('Export ไม่สำเร็จ: '+e.message);}
+}
+
+function exportExcel(){
+  if(!Object.keys(schedule).length){alert('สร้างตารางก่อน');return;}
+  const dates=buildDateRange();
+  const activeDocs=doctors.filter(d=>d.active);
+  const wb=XLSX.utils.book_new();
+  const hdr1=['วันที่','วัน'];
+  activeDocs.forEach(d=>hdr1.push(`${d.name}\n${d.phone||''}`));
+  const rows1=[hdr1];
+  dates.forEach(di=>{
+    const row=[ddmmyy(di.ds), THAI_DAYS_SHORT[di.dow]+(di.isHoliday?' (หยุด)':di.isWeekend?' (ส-อ)':'')];
+    activeDocs.forEach(d=>{
+      const sid=getAssignedShift(d.id,di.ds);
+      row.push(sid?shifts.find(s=>s.id===sid)?.abbr||'':'');
+    });
+    rows1.push(row);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(rows1);
+  ws1['!cols']=[{wch:11},{wch:9},...activeDocs.map(()=>({wch:16}))];
+  XLSX.utils.book_append_sheet(wb,ws1,'ตารางเวร');
+  const hdr2=['วันที่','วัน'];
+  shifts.forEach(s=>hdr2.push(s.name));
+  const rows2=[hdr2];
+  dates.forEach(di=>{
+    const row=[ddmmyy(di.ds), THAI_DAYS_SHORT[di.dow]+(di.isHoliday?' (หยุด)':di.isWeekend?' (ส-อ)':'')];
+    shifts.forEach(sh=>{
+      const docId=schedule[di.ds]?schedule[di.ds][sh.id]:null;
+      const doc=docId?activeDocs.find(d=>d.id===docId):null;
+      row.push(doc?`${doc.name} ${doc.phone||''}`:'');
+    });
+    rows2.push(row);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols']=[{wch:11},{wch:9},...shifts.map(()=>({wch:24}))];
+  XLSX.utils.book_append_sheet(wb,ws2,'ตาราง Ward');
+  const cnt={};
+  activeDocs.forEach(d=>{cnt[d.id]={tot:0,wd:0,we:0,byShift:{}};shifts.forEach(s=>{cnt[d.id].byShift[s.id]=0;});});
+  dates.forEach(di=>{
+    const isWE=di.isWeekend||di.isHoliday;
+    Object.entries(schedule[di.ds]||{}).forEach(([sid,did])=>{
+      if(cnt[did]){cnt[did].tot++;cnt[did].byShift[sid]=(cnt[did].byShift[sid]||0)+1;if(isWE)cnt[did].we++;else cnt[did].wd++;}
+    });
+  });
+  const hdr3=['ชื่อแพทย์','รวมเวร','วันธรรมดา','วันหยุด',...shifts.map(s=>s.name),'เบอร์โทร'];
+  const rows3=[hdr3];
+  activeDocs.forEach(d=>{
+    const c=cnt[d.id];
+    rows3.push([d.name,c.tot,c.wd,c.we,...shifts.map(s=>c.byShift[s.id]||0),d.phone||'']);
+  });
+  rows3.push(['รวม',activeDocs.reduce((s,d)=>s+cnt[d.id].tot,0),activeDocs.reduce((s,d)=>s+cnt[d.id].wd,0),activeDocs.reduce((s,d)=>s+cnt[d.id].we,0),...shifts.map(s=>activeDocs.reduce((sum,d)=>sum+(cnt[d.id].byShift[s.id]||0),0)),'']);
+  const ws3=XLSX.utils.aoa_to_sheet(rows3);
+  ws3['!cols']=[{wch:24},{wch:10},{wch:12},{wch:10},...shifts.map(()=>({wch:14})),{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws3,'สรุปยอด');
+  const holRows=[['วันที่ (dd/mm/yy)','วันที่ (dd/mm/yyyy)','วัน','ชื่อวันหยุด']];
+  dates.filter(d=>d.isHoliday).forEach(di=>{
+    holRows.push([ddmmyy(di.ds),ddmmyyyy(di.ds),THAI_DAYS_SHORT[di.dow],THAI_HOLIDAYS[di.ds]?.name||'']);
+  });
+  const ws4=XLSX.utils.aoa_to_sheet(holRows);
+  ws4['!cols']=[{wch:14},{wch:16},{wch:8},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws4,'วันหยุดราชการ');
+  const from=document.getElementById('date-from').value;
+  const to=document.getElementById('date-to').value;
+  XLSX.writeFile(wb,`ตารางเวร_${from}_${to}.xlsx`);
+}
+
+function exportExcelWard(){ exportExcel(); }
+
+init();
+</script>
+</body>
+</html>
