@@ -366,7 +366,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent)}
     <!-- ช่วงเวลา -->
     <div class="d-sec">
       <h3>📅 ช่วงเวลาจัดเวร</h3>
-      <div class="date-range-row">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px">
         <div>
           <label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px">วันเริ่มต้น</label>
           <input type="date" id="date-from" onchange="onRangeChange()">
@@ -499,6 +499,12 @@ let doctors = [
   {id:1,name:'นพ.สมชาย ใจดี',phone:'0812345678',param:0,offDates:[],active:true},
   {id:2,name:'พญ.สมหญิง รักดี',phone:'0823456789',param:0,offDates:[],active:true},
   {id:3,name:'นพ.ประยุทธ เก่งมาก',phone:'0834567890',param:1,offDates:[],active:true},
+  {id:4,name:'พญ.วรรณา สุขสันต์',phone:'0845678901',param:0,offDates:[],active:true},
+  {id:5,name:'นพ.ธนกร มั่นคง',phone:'0856789012',param:0,offDates:[],active:true},
+  {id:6,name:'พญ.นภาพร ดีงาม',phone:'0867890123',param:0,offDates:[],active:true},
+  {id:7,name:'นพ.อนุชา วิชาดี',phone:'0878901234',param:0,offDates:[],active:true},
+  {id:8,name:'พญ.ปิยะดา รุ่งเรือง',phone:'0889012345',param:0,offDates:[],active:true},
+  {id:9,name:'นพ.กิตติพงษ์ ศรีสุข',phone:'0890123456',param:0,offDates:[],active:true},
 ];
 let shifts = [
   {id:1,name:'เวรเช้า',abbr:'ช',color:'#1a5c8a'},
