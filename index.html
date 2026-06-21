@@ -185,16 +185,17 @@ input:focus,select:focus{outline:none;border-color:var(--accent)}
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius2);box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .sch-table{border-collapse:collapse;background:var(--bg2)}
 .sch-table th{background:#1a3a5c;color:#fff;padding:8px 9px;font-size:11px;font-weight:500;white-space:nowrap;text-align:center}
-.sch-table td{padding:5px 7px;border:0.5px solid var(--border);font-size:12px;text-align:center;vertical-align:middle}
+.sch-table td{padding:4px 5px;border:0.5px solid var(--border);font-size:12px;text-align:center;vertical-align:middle;max-width:80px}
 .sch-table tr:hover td{background:#f8f7f4}
 .sticky-col{position:sticky;left:0;z-index:2;background:var(--bg)!important;white-space:nowrap}
 .weekend-bg{background:#fffbf0!important}
 .holiday-bg{background:#fff0f0!important}
-.shift-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;min-width:28px;min-height:28px;line-height:22px}
+.shift-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;min-width:26px;height:26px;line-height:1}
 .shift-badge:active{transform:scale(1.07);filter:brightness(.9)}
 .conflict-cell .shift-badge{outline:2px solid #e24b4a;outline-offset:1px}
-.warn-mark{font-size:9px;display:block;line-height:1.2}
-.empty-cell{color:var(--text3);font-size:12px;cursor:pointer;min-height:36px}
+.warn-mark{font-size:8px;display:block;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px}
+.cell-inner{display:flex;flex-direction:column;align-items:center;gap:1px}
+.empty-cell{color:var(--text3);font-size:12px;cursor:pointer;min-height:34px}
 .empty-cell:active{background:var(--accent2)!important}
 
 /* ======= SUMMARY TABLE ======= */
@@ -272,7 +273,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent)}
   <button class="menu-btn" onclick="openDrawer()">☰</button>
   <div class="hdr-title">
     <div style="font-size:16px;font-weight:600">⚕ ระบบจัดเวรแพทย์</div>
-    <div style="font-size:10px;opacity:.6">Medical Duty Scheduler</div>
+    <div style="font-size:10px;opacity:.6">Medical Duty Scheduler by Saritkeat Rerktanakajorn, M.D.</div>
   </div>
   <button class="hdr-btn" onclick="generateSchedule()">⚡ สร้างเวร</button>
 </div>
@@ -974,10 +975,12 @@ function renderDocTable(dates,activeDocs){
       if(sid){
         const sh=shifts.find(s=>s.id===sid);
         html+=`<td style="background:${cellBg}" class="${conflict?'conflict-cell':''}">
-          <span class="shift-badge" style="background:${sh.color}22;color:${sh.color};border:1px solid ${sh.color}55"
-            onclick="openCell('${di.ds}',${doc.id},'${doc.name}')">${sh.abbr}</span>
-          ${conflict?`<span class="warn-mark" style="color:var(--danger)">⚠ ติดวัน</span>`:''}
-          ${(!conflict&&sameRep)?`<span class="warn-mark" style="color:#b8860b">↻ ซ้ำ</span>`:''}
+          <div class="cell-inner">
+            <span class="shift-badge" style="background:${sh.color}22;color:${sh.color};border:1px solid ${sh.color}55"
+              onclick="openCell('${di.ds}',${doc.id},'${doc.name}')">${sh.abbr}</span>
+            ${conflict?`<span class="warn-mark" style="color:var(--danger)">⚠ติดวัน</span>`:''}
+            ${(!conflict&&sameRep)?`<span class="warn-mark" style="color:#b8860b">↻ซ้ำ</span>`:''}
+          </div>
         </td>`;
       } else {
         html+=`<td class="empty-cell" style="background:${cellBg}" onclick="openCell('${di.ds}',${doc.id},'${doc.name}')">—</td>`;
@@ -1123,13 +1126,12 @@ function confirmCell(){
 // EXPORT
 async function exportJPEG(elemId, filename){
   if(!Object.keys(schedule).length){alert('สร้างตารางก่อน');return;}
-  const el=document.getElementById(elemId);
-  if(!el){alert('ไม่พบตาราง');return;}
+  const wrap=document.getElementById(elemId);
+  if(!wrap){alert('ไม่พบตาราง');return;}
+  // capture the inner table element to avoid extra white space
+  const el=wrap.querySelector('table')||wrap;
   try{
-    const origOverflow=el.style.overflow;
-    el.style.overflow='visible';
     const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollX:0,scrollY:0,width:el.scrollWidth,height:el.scrollHeight});
-    el.style.overflow=origOverflow;
     const link=document.createElement('a');
     const from=document.getElementById('date-from').value;
     const to=document.getElementById('date-to').value;
